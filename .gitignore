@@ -1,0 +1,11 @@
+# Open SCAD artifacts
+*.scad
+
+# VS Code
+.vscode/
+
+# Python stuff
+.venv/
+*.egg-info/
+__pycache__/
+*.pyc
