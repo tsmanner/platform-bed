@@ -16,3 +16,4 @@ if __name__ == "__main__":
     scad_render_to_file(platformbed.base(width, length, overhang), filepath="base.scad")
     scad_render_to_file(platformbed.slats(width, length, overhang), filepath="slats.scad")
     scad_render_to_file(platformbed.bed(width, length, overhang), filepath="bed.scad")
+    scad_render_to_file(platformbed.riser(width), filepath="riser.scad")

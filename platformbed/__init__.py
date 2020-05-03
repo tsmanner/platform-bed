@@ -44,7 +44,7 @@ class TwoByFour(Board):
     WIDTH = 3.5
     THICKNESS = 1.5
     def __init__(self, length, axis=(X, Y, Z)):
-        super().__init__(length, , axis)
+        super().__init__(length, axis)
 
 
 def slat_displacements(matress_length):
@@ -142,3 +142,16 @@ def base(matress_width, matress_length, overhang):
 
 def bed(matress_width, matress_length, overhang):
     return translate((overhang, 0, 0))(base(matress_width, matress_length, overhang)) + slats(matress_width, matress_length, overhang)
+
+
+def riser(matress_width):
+    return (
+        translate((0, 0, 3.5))(board(3.5, 3.5, matress_width, (
+            Z,
+            Y,
+            X,
+        )))
+      + board(3.5, 3.5, 3.5, (X, Y, Z))
+      + translate((matress_width - 3.5, 0, 0))(board(3.5, 3.5, 3.5, (X, Y, Z)))
+      + translate(((matress_width - 3.5) / 2, 0, 0))(board(3.5, 3.5, 3.5, (X, Y, Z)))
+    )
