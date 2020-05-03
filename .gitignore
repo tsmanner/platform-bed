@@ -1,5 +1,6 @@
 # Open SCAD artifacts
 *.scad
+scadfiles/
 
 # VS Code
 .vscode/

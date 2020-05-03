@@ -1,3 +1,4 @@
+from itertools import repeat
 from solid import color, cube, hole, mirror, part, rotate, translate, union, OpenSCADObject
 from .joints import dovetail
 
@@ -28,6 +29,10 @@ def two_by_four(length, axis=(X, Y, Z)):
     return board(length, 3.5, 3/2, axis)
 
 
+def four_by_four(length, axis=(X, Y, Z)):
+    return board(length, 7/2, 7/2, axis)
+
+
 class Board:
     def __init__(self, length, width, thickness, axis=(X, Y, Z)):
         super().__init__("Board", {})
@@ -56,7 +61,7 @@ def slat_displacements(matress_length):
         displacement += step
 
 
-def middle_slat(matress_width, overhang):
+def slat_middle(matress_width, overhang):
     length = matress_width + overhang * 2
     half_cross = hole()(cube((3/2, 3.5, 0.25)))
     return part()(
@@ -66,7 +71,7 @@ def middle_slat(matress_width, overhang):
     )
 
 
-def end_slat(matress_width, overhang):
+def slat_end(matress_width, overhang):
     length = matress_width + overhang * 2
     half_cross = hole()(cube((3/2, 3.5, 0.5)))
     mortice = hole()(cube((3/2, 3/2, 3/4)))
@@ -97,6 +102,24 @@ def base_side(matress_length):
     ))
 
 
+def base_longitudinal_displacements(matress_width):
+    segments = 3
+    dx = (matress_width - 1.5) / segments
+    x = 0
+    while x <= matress_width:
+        yield x
+        x += dx
+
+
+def base_lateral_displacements(matress_length):
+    segments = 2
+    dy = (matress_length - 1.5) / segments
+    y = 0
+    while y <= matress_length:
+        yield y
+        y += dy
+
+
 def base_support(matress_length, overhang):
     half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("tan")(part()(
@@ -123,35 +146,48 @@ def base_end(matress_width):
 
 def slats(matress_width, matress_length, overhang):
     return color("peru")(
-        translate((0, 0, 11/4))(end_slat(matress_width, overhang))
-      + translate((0, matress_length + 2 * overhang, 11/4))(mirror((0, 1, 0))(end_slat(matress_width, overhang)))
-      + union()(*[translate((0, overhang + y, 11/4))(middle_slat(matress_width, overhang)) for y in slat_displacements(matress_length)])
+        translate((0, 0, 11/4))(slat_end(matress_width, overhang))
+      + translate((0, matress_length + 2 * overhang, 11/4))(mirror((0, 1, 0))(slat_end(matress_width, overhang)))
+      + union()(*[translate((0, overhang + y, 11/4))(slat_middle(matress_width, overhang)) for y in slat_displacements(matress_length)])
     )
 
 
 def base(matress_width, matress_length, overhang):
-    return (
-        translate((0, overhang, 0))(base_end(matress_width))
-      + translate((0, overhang + matress_length, 0))(mirror((0, 1, 0))(base_end(matress_width)))
-      + translate((0, overhang, 0))(base_side(matress_length))
-      + translate((matress_width, overhang, 0))(mirror((1, 0, 0))(base_side(matress_length)))
-      + translate((matress_width / 3 - 3/4, 0, 0))(base_support(matress_length, overhang))
-      + translate((2 * matress_width / 3 - 3/4, 0, 0))(base_support(matress_length, overhang))
+    end_to_end = zip(
+        (base_side(matress_length), base_support(matress_length, overhang), base_support(matress_length, overhang), base_side(matress_length)),
+        base_longitudinal_displacements(matress_width),
+        (overhang, 0, 0, overhang)
+    )
+    end_to_end = union()(
+        translate((0, overhang, 0))(base_end(matress_width)),
+        translate((0, overhang + matress_length, 0))(mirror((0, 1, 0))(base_end(matress_width))),
+        translate((0, overhang, 0))(base_side(matress_length)),
+        translate((matress_width, overhang, 0))(mirror((1, 0, 0))(base_side(matress_length))),
+        *[translate((x, y, 0))(part) for part, x, y in end_to_end]
+    )
+    return end_to_end
+
+
+def foot(rise):
+    notch_depth = 2
+    return part()(
+        four_by_four(notch_depth + rise, (Z, X, Y))
+      - hole()(translate((0, 1, rise))(cube((3.5, 1.5, notch_depth))))
+      - hole()(translate((1, 0, rise))(cube((1.5, 3.5, notch_depth))))
     )
 
 
-def bed(matress_width, matress_length, overhang):
+def feet_generator(matress_width, matress_length, rise):
+    for x in base_longitudinal_displacements(matress_width):
+        for y in base_lateral_displacements(matress_length):
+            yield translate((x, y, 0))(foot(rise))
+
+
+def feet(matress_width, matress_length, rise):
+    return sum(feet_generator(matress_width, matress_length, rise))
+
+
+def bed(matress_width, matress_length, overhang, rise=None):
+    if rise:
+        return translate((0, 0, rise))(bed(matress_width, matress_length, overhang)) + translate((overhang - 1, overhang - 1, 0))(feet(matress_width, matress_length, rise))
     return translate((overhang, 0, 0))(base(matress_width, matress_length, overhang)) + slats(matress_width, matress_length, overhang)
-
-
-def riser(matress_width):
-    return (
-        translate((0, 0, 3.5))(board(3.5, 3.5, matress_width, (
-            Z,
-            Y,
-            X,
-        )))
-      + board(3.5, 3.5, 3.5, (X, Y, Z))
-      + translate((matress_width - 3.5, 0, 0))(board(3.5, 3.5, 3.5, (X, Y, Z)))
-      + translate(((matress_width - 3.5) / 2, 0, 0))(board(3.5, 3.5, 3.5, (X, Y, Z)))
-    )
