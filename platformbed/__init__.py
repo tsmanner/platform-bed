@@ -63,7 +63,7 @@ def slat_displacements(matress_length):
 
 def slat_middle(matress_width, overhang):
     length = matress_width + overhang * 2
-    half_cross = hole()(cube((3/2, 3.5, 0.25)))
+    half_cross = hole()(cube((3/2, 7/2, 1/4)))
     return part()(
         one_by_four(length)
       - translate((length - 3/2 - overhang, 0, 0))(half_cross)
@@ -73,32 +73,25 @@ def slat_middle(matress_width, overhang):
 
 def slat_end(matress_width, overhang):
     length = matress_width + overhang * 2
-    half_cross = hole()(cube((3/2, 3.5, 0.5)))
-    mortice = hole()(cube((3/2, 3/2, 3/4)))
+    half_cross = hole()(cube((3/2, 11/2, 1/4)) + translate((0, 2, 0))(cube((3/2, 3/2, 3/4))))
     return part()(
         one_by_six(length)
-      - translate((length - 3/2 - overhang, 2, 1/4))(half_cross)
-      - translate((overhang, 2, 1/4))(half_cross)
-      - translate((overhang + matress_width / 3 - 3/4, 2, 0))(mortice)
-      - translate((overhang + 2 * matress_width / 3 - 3/4, 2, 0))(mortice)
+      - translate((length - 3/2 - overhang, 0, 0))(half_cross)
+      - translate((overhang, 0, 0))(half_cross)
     )
 
 
-def base_corner_joint():
-    return (
-        translate((3/2, 0, 1 + 1/4 + 3/4))(rotate((0, 90, 90))(dovetail(1.25, 3/2, 3/2, 1/6)))
-      + translate((0, 0, 3))(cube((3/2, 3/2, 1/2)))
-      - hole()(translate((0, 3/2, 11/4))(cube((3/2, 3/2, 1/4))))
-    )
-
-
-def base_side(matress_length):
-    half_cross = hole()(cube((3/2, 7/2, 1/2)))
+def base_side(matress_length, overhang):
+    end_slat_half_cross = hole()(cube((3/2, 2, 1/2)) + translate((0, 7/2, 0))(cube((3/2, 2, 1/2))))
+    slat_half_cross = hole()(cube((3/2, 7/2, 1/2)))
+    base_half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("tan")(part()(
-        translate((0, 3/2, 0))(two_by_four(matress_length - 3, (Y, Z, X)))
-      + base_corner_joint()
-      + translate((0, matress_length - 3/2, 0))(base_corner_joint())
-      - union()(*[translate((0, y, 3))(half_cross) for y in slat_displacements(matress_length)])
+        two_by_four(matress_length + 2 * overhang, (Y, Z, X))
+      + translate((0, overhang, 0))(base_half_cross)
+      + translate((0, overhang + matress_length - 3/2, 0))(base_half_cross)
+      + translate((0, 0, 3))(end_slat_half_cross)
+      + translate((0, 2 * overhang + matress_length - 11/2, 3))(end_slat_half_cross)
+      - union()(*[translate((0, overhang + y, 3))(slat_half_cross) for y in slat_displacements(matress_length)])
     ))
 
 
@@ -124,23 +117,16 @@ def base_support(matress_length, overhang):
     half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("tan")(part()(
         board(matress_length + overhang * 2, 11/4, 3/2, (Y, Z, X))
-      - translate((0, overhang, 11/8))(half_cross)
-      - translate((0, overhang + matress_length - 3/2, 11/8))(half_cross)
+      - translate((0, overhang, 0))(half_cross)
+      - translate((0, overhang + matress_length - 3/2, 0))(half_cross)
     ))
 
 
-def base_end(matress_width):
-    joint = hole()(base_corner_joint())
-    tenon = cube((3/2, 3/2, 3/4))
+def base_end(matress_width, overhang):
     half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("saddlebrown")(part()(
-        board(matress_width, 11/4, 3/2, (X, Z, Y))
-      - joint
-      - translate((matress_width, 0, 0))(mirror((1, 0, 0))(joint))
-      + translate((matress_width / 3 - 3/4, 0, 11/4))(tenon)
-      + translate((2 * matress_width / 3 - 3/4, 0, 11/4))(tenon)
-      - translate((matress_width / 3 - 3/4, 0, 0))(half_cross)
-      - translate((2 * matress_width / 3 - 3/4, 0, 0))(half_cross)
+        board(matress_width + 2 * overhang, 11/4, 3/2, (X, Z, Y))
+      - union()(*[translate((overhang + x, 0, 11/8))(half_cross) for x in base_longitudinal_displacements(matress_width)])
     ))
 
 
@@ -154,16 +140,13 @@ def slats(matress_width, matress_length, overhang):
 
 def base(matress_width, matress_length, overhang):
     end_to_end = zip(
-        (base_side(matress_length), base_support(matress_length, overhang), base_support(matress_length, overhang), base_side(matress_length)),
+        (base_side(matress_length, overhang), base_support(matress_length, overhang), base_support(matress_length, overhang), base_side(matress_length, overhang)),
         base_longitudinal_displacements(matress_width),
-        (overhang, 0, 0, overhang)
     )
     end_to_end = union()(
-        translate((0, overhang, 0))(base_end(matress_width)),
-        translate((0, overhang + matress_length, 0))(mirror((0, 1, 0))(base_end(matress_width))),
-        translate((0, overhang, 0))(base_side(matress_length)),
-        translate((matress_width, overhang, 0))(mirror((1, 0, 0))(base_side(matress_length))),
-        *[translate((x, y, 0))(part) for part, x, y in end_to_end]
+        translate((0, overhang, 0))(base_end(matress_width, overhang)),
+        translate((0, overhang + matress_length, 0))(mirror((0, 1, 0))(base_end(matress_width, overhang))),
+        *[translate((overhang + x, 0, 0))(part) for part, x in end_to_end]
     )
     return end_to_end
 
@@ -187,7 +170,14 @@ def feet(matress_width, matress_length, rise):
     return sum(feet_generator(matress_width, matress_length, rise))
 
 
+def bed_without_feet(matress_width, matress_length, overhang):
+    return base(matress_width, matress_length, overhang) + slats(matress_width, matress_length, overhang)
+
+
+def bed_with_feet(matress_width, matress_length, overhang, rise):
+    return translate((0, 0, rise))(bed_without_feet(matress_width, matress_length, overhang)) + translate((overhang - 1, overhang - 1, 0))(feet(matress_width, matress_length, rise))
+
+
 def bed(matress_width, matress_length, overhang, rise=None):
-    if rise:
-        return translate((0, 0, rise))(bed(matress_width, matress_length, overhang)) + translate((overhang - 1, overhang - 1, 0))(feet(matress_width, matress_length, rise))
-    return translate((overhang, 0, 0))(base(matress_width, matress_length, overhang)) + slats(matress_width, matress_length, overhang)
+    if rise: return bed_with_feet(matress_width, matress_length, overhang, rise)
+    return bed_without_feet(matress_width, matress_length, overhang)
