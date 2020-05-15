@@ -30,8 +30,8 @@ class Board(OpenSCADObject):
 
 
 class OneByFour(Board):
-    WIDTH = 3.5
     THICKNESS = 0.75
+    WIDTH = 3.5
     def __init__(self, length, axis=(X, Y, Z)):
         super().__init__(length, self.WIDTH, self.THICKNESS, axis)
 
@@ -40,8 +40,8 @@ class OneByFour(Board):
 
 
 class OneBySix(Board):
-    WIDTH = 5.5
     THICKNESS = 0.75
+    WIDTH = 5.5
     def __init__(self, length, axis=(X, Y, Z)):
         super().__init__(length, self.WIDTH, self.THICKNESS, axis)
 
@@ -50,8 +50,8 @@ class OneBySix(Board):
 
 
 class TwoByFour(Board):
-    WIDTH = 3.5
     THICKNESS = 1.5
+    WIDTH = 3.5
     def __init__(self, length, axis=(X, Y, Z)):
         super().__init__(length, self.WIDTH, self.THICKNESS, axis)
 
@@ -60,8 +60,8 @@ class TwoByFour(Board):
 
 
 class FourByFour(Board):
-    WIDTH = 3.5
     THICKNESS = 3.5
+    WIDTH = 3.5
     def __init__(self, length, axis=(X, Y, Z)):
         super().__init__(length, self.WIDTH, self.THICKNESS, axis)
 
