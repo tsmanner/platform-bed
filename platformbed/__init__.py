@@ -1,5 +1,6 @@
 from itertools import repeat
 from solid import color, cube, hole, mirror, part, rotate, translate, union, OpenSCADObject
+from solid import OpenSCADObject, scad_render
 from .joints import dovetail
 
 X = 0
@@ -7,49 +8,65 @@ Y = 1
 Z = 2
 
 
-def board(length, width, thickness, axis):
-    return cube(tuple(s[0] for s in sorted(
-        zip(
-            (length, width, thickness),
-            axis,
-        ),
-        key=lambda z: z[1]
-    )))()
-
-
-def one_by_four(length, axis=(X, Y, Z)):
-    return board(length, 3.5, 0.75, axis)
-
-
-def one_by_six(length, axis=(X, Y, Z)):
-    return board(length, 5.5, 0.75, axis)
-
-
-def two_by_four(length, axis=(X, Y, Z)):
-    return board(length, 3.5, 3/2, axis)
-
-
-def four_by_four(length, axis=(X, Y, Z)):
-    return board(length, 7/2, 7/2, axis)
-
-
-class Board:
+class Board(OpenSCADObject):
     def __init__(self, length, width, thickness, axis=(X, Y, Z)):
-        super().__init__("Board", {})
+        super().__init__("cube", {})
         self.length = length
         self.width = width
         self.thickness = thickness
         self.axis = axis
 
-    def scad(self):
-        return board(self.length, self.width, self.thickness, self.axis)
+    def _render(self, *args, **kwargs):
+        return cube(tuple(s[0] for s in sorted(
+            zip(
+                (self.length, self.width, self.thickness),
+                self.axis,
+            ),
+            key=lambda z: z[1]
+        )))()._render(*args, **kwargs)
+
+    def __repr__(self):
+        return f'{self.thickness} x {self.width} x {self.length}"'
+
+
+class OneByFour(Board):
+    WIDTH = 3.5
+    THICKNESS = 0.75
+    def __init__(self, length, axis=(X, Y, Z)):
+        super().__init__(length, self.WIDTH, self.THICKNESS, axis)
+
+    def __repr__(self):
+        return f'1 x 4 x {self.length}" ({super().__repr__()})'
+
+
+class OneBySix(Board):
+    WIDTH = 5.5
+    THICKNESS = 0.75
+    def __init__(self, length, axis=(X, Y, Z)):
+        super().__init__(length, self.WIDTH, self.THICKNESS, axis)
+
+    def __repr__(self):
+        return f'1 x 6 x {self.length}" ({super().__repr__()})'
 
 
 class TwoByFour(Board):
     WIDTH = 3.5
     THICKNESS = 1.5
     def __init__(self, length, axis=(X, Y, Z)):
-        super().__init__(length, axis)
+        super().__init__(length, self.WIDTH, self.THICKNESS, axis)
+
+    def __repr__(self):
+        return f'2 x 4 x {self.length}" ({super().__repr__()})'
+
+
+class FourByFour(Board):
+    WIDTH = 3.5
+    THICKNESS = 3.5
+    def __init__(self, length, axis=(X, Y, Z)):
+        super().__init__(length, self.WIDTH, self.THICKNESS, axis)
+
+    def __repr__(self):
+        return f'4 x 4 x {self.length}" ({super().__repr__()})'
 
 
 def slat_displacements(matress_length):
@@ -65,7 +82,7 @@ def slat_middle(matress_width, overhang):
     length = matress_width + overhang * 2
     half_cross = hole()(cube((3/2, 7/2, 1/4)))
     return part()(
-        one_by_four(length)
+        OneByFour(length)
       - translate((length - 3/2 - overhang, 0, 0))(half_cross)
       - translate((overhang, 0, 0))(half_cross)
     )
@@ -75,7 +92,7 @@ def slat_end(matress_width, overhang):
     length = matress_width + overhang * 2
     half_cross = hole()(cube((3/2, 11/2, 1/4)) + translate((0, 2, 0))(cube((3/2, 3/2, 3/4))))
     return part()(
-        one_by_six(length)
+        OneBySix(length)
       - translate((length - 3/2 - overhang, 0, 0))(half_cross)
       - translate((overhang, 0, 0))(half_cross)
     )
@@ -86,7 +103,7 @@ def base_side(matress_length, overhang):
     slat_half_cross = hole()(cube((3/2, 7/2, 1/2)))
     base_half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("tan")(part()(
-        two_by_four(matress_length + 2 * overhang, (Y, Z, X))
+        TwoByFour(matress_length + 2 * overhang, (Y, Z, X))
       + translate((0, overhang, 0))(base_half_cross)
       + translate((0, overhang + matress_length - 3/2, 0))(base_half_cross)
       + translate((0, 0, 3))(end_slat_half_cross)
@@ -116,7 +133,7 @@ def base_lateral_displacements(matress_length):
 def base_support(matress_length, overhang):
     half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("tan")(part()(
-        board(matress_length + overhang * 2, 11/4, 3/2, (Y, Z, X))
+        Board(matress_length + overhang * 2, 11/4, 3/2, (Y, Z, X))
       - translate((0, overhang, 0))(half_cross)
       - translate((0, overhang + matress_length - 3/2, 0))(half_cross)
     ))
@@ -125,7 +142,7 @@ def base_support(matress_length, overhang):
 def base_end(matress_width, overhang):
     half_cross = hole()(cube((3/2, 3/2, 11/8)))
     return color("saddlebrown")(part()(
-        board(matress_width + 2 * overhang, 11/4, 3/2, (X, Z, Y))
+        Board(matress_width + 2 * overhang, 11/4, 3/2, (X, Z, Y))
       - union()(*[translate((overhang + x, 0, 11/8))(half_cross) for x in base_longitudinal_displacements(matress_width)])
     ))
 
@@ -154,7 +171,7 @@ def base(matress_width, matress_length, overhang):
 def foot(rise):
     notch_depth = 2
     return part()(
-        four_by_four(notch_depth + rise, (Z, X, Y))
+        FourByFour(notch_depth + rise, (Z, X, Y))
       - hole()(translate((0, 1, rise))(cube((3.5, 1.5, notch_depth))))
       - hole()(translate((1, 0, rise))(cube((1.5, 3.5, notch_depth))))
     )
